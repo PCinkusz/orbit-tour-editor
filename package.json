@@ -1,0 +1,48 @@
+{
+  "name": "orbit-tour-editor",
+  "version": "1.0.0",
+  "description": "Free editor and viewer for interactive 360° video tours (WebXR, Meta Quest ready).",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "keywords": [
+    "360",
+    "video",
+    "vr",
+    "webxr",
+    "aframe",
+    "tour",
+    "meta-quest"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PCinkusz/orbit-tour-editor.git"
+  },
+  "homepage": "https://github.com/PCinkusz/orbit-tour-editor#readme",
+  "bugs": {
+    "url": "https://github.com/PCinkusz/orbit-tour-editor/issues"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "view": "node server/index.js --view",
+    "export": "node scripts/export.js",
+    "submit": "node scripts/submit.js",
+    "deploy:pages": "bash scripts/deploy-pages.sh",
+    "test": "node --test test/*.test.js",
+    "server": "node server/index.js"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "aframe": "^1.8.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

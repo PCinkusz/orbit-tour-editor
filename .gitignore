@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/*
+!data/media/
+data/media/*
+!data/media/.gitkeep
+*.log
+exports/
+submissions/

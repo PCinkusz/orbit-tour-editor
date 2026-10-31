@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0e1114" />
+  <title>Orbit — 360° tour editor</title>
+</head>
+<body>
+  <div id="app" data-mode="edit">
+    <header class="topbar" id="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">Orbit</span></div>
+      <input id="tour-title" class="title-input" aria-label="Tour title" maxlength="160" placeholder="Untitled tour" autocomplete="off" />
+      <div class="topbar-actions">
+        <div class="icon-group">
+          <button id="undo-button" class="icon-button" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" data-icon="undo"></button>
+          <button id="redo-button" class="icon-button flip" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" data-icon="undo"></button>
+        </div>
+        <button id="save-state" class="save-state" type="button" data-state="saved" aria-live="polite">Saved</button>
+        <div class="segmented" role="tablist" aria-label="Mode">
+          <button id="edit-button" type="button" role="tab" aria-selected="true">Edit</button>
+          <button id="preview-button" type="button" role="tab" aria-selected="false">Preview</button>
+        </div>
+        <button id="settings-button" class="icon-button" type="button" aria-label="Tour settings" title="Tour settings" data-icon="sliders"></button>
+        <button id="export-button" class="button primary" type="button" data-icon="package">Export</button>
+      </div>
+    </header>
+
+    <div class="workspace" id="workspace">
+      <aside class="panel panel-left" id="locations-panel" aria-label="Locations"></aside>
+
+      <main class="stage" id="stage" data-mode="edit">
+        <a-scene id="world" embedded renderer="colorManagement: true; antialias: true; foveationLevel: 0.5" background="color: #0b0e11" vr-mode-ui="enabled: true" cursor__mouse="rayOrigin: mouse" cursor__xrselect="rayOrigin: xrselect" raycaster="objects: .clickable; far: 100">
+          <a-assets timeout="30000"><video id="tour-video" playsinline webkit-playsinline preload="metadata" loop></video></a-assets>
+          <a-videosphere id="video-sphere" src="#tour-video" radius="50" segments-width="128" segments-height="64" visible="false"></a-videosphere>
+          <a-entity id="hotspots"></a-entity>
+          <a-entity id="camera" camera="fov: 70" look-controls="pointerLockEnabled: false; reverseMouseDrag: true" position="0 0 0">
+            <a-entity id="gaze" visible="false" cursor="fuse: true; fuseTimeout: 1800" raycaster="objects: .clickable; far: 20" geometry="primitive: ring; radiusInner: 0.011; radiusOuter: 0.016" material="color: #f5f4e9; shader: flat; opacity: 0.8" position="0 0 -1"></a-entity>
+            <a-entity id="vr-info" visible="false" position="0 0 -2.4"></a-entity>
+            <a-plane id="vr-transition" visible="false" position="0 0 -0.8" width="4" height="4" material="shader: flat; color: #05090d; transparent: true; opacity: 0; depthTest: false"></a-plane>
+          </a-entity>
+          <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 20"></a-entity>
+          <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 20"></a-entity>
+        </a-scene>
+
+        <div id="desktop-hotspots" class="desktop-hotspots"></div>
+        <div id="scene-fade" class="scene-fade" aria-hidden="true"></div>
+
+        <div class="chip" id="location-chip" hidden>
+          <span class="chip-tour" id="chip-tour"></span>
+          <span class="chip-line"><span class="chip-index" id="chip-index"></span><strong id="chip-name"></strong></span>
+        </div>
+
+        <div class="banner" id="banner" role="status" hidden>
+          <span id="banner-text"></span>
+          <button id="banner-cancel" type="button" class="banner-cancel">Cancel <kbd>Esc</kbd></button>
+        </div>
+
+        <div class="notice" id="notice" role="status" hidden></div>
+
+        <div class="empty" id="empty-state" hidden>
+          <h2>No locations yet</h2>
+          <p>Add a location, upload its 360° video, then place hotspots on it.</p>
+          <button id="empty-add" class="button primary" type="button" data-icon="plus">Add first location</button>
+        </div>
+
+        <button class="start-overlay" id="start-overlay" type="button" hidden data-icon="play" data-size="22">Start tour</button>
+
+        <article class="info-card" id="info-card" role="dialog" aria-labelledby="info-title" hidden>
+          <button id="info-close" class="icon-button" type="button" aria-label="Close" data-icon="x"></button>
+          <img id="info-image" alt="" hidden />
+          <h2 id="info-title"></h2>
+          <p id="info-body"></p>
+        </article>
+
+        <div class="transport" id="transport">
+          <button id="t-locations" class="icon-button" type="button" aria-label="Locations" title="Locations" aria-haspopup="menu" aria-expanded="false" data-icon="list" hidden></button>
+          <button id="t-play" class="icon-button" type="button" aria-label="Play" data-icon="play"></button>
+          <input id="t-seek" class="seek" type="range" min="0" max="1000" value="0" aria-label="Seek" />
+          <span id="t-time" class="time" aria-hidden="true">0:00 / 0:00</span>
+          <button id="t-mute" class="icon-button" type="button" aria-label="Mute" data-icon="volume"></button>
+          <button id="t-full" class="icon-button" type="button" aria-label="Full screen" title="Full screen" data-icon="fullscreen"></button>
+          <div class="menu" id="locations-menu" role="menu" hidden></div>
+        </div>
+      </main>
+
+      <aside class="panel panel-right" id="inspector" aria-label="Inspector"></aside>
+    </div>
+  </div>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title"></dialog>
+  <dialog id="export-dialog" aria-labelledby="export-title"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <input id="import-file" type="file" accept="application/json,.json" hidden />
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

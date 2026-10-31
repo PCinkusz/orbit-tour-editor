@@ -1,0 +1,60 @@
+HOW TO PLAY THIS 360 TOUR
+=========================
+
+This folder is a complete, self-contained tour. It needs a small web server
+to play; the start scripts below run one for you. They need Node.js (18+) or
+Python 3 installed. Nothing else is required and nothing is downloaded.
+
+1. PLAY ON A COMPUTER
+---------------------
+ - Windows:    double-click  start-windows.bat
+ - Mac/Linux:  run  ./start-mac-linux.sh  in a terminal
+               (if it is not executable: sh start-mac-linux.sh)
+Then open the address it prints, e.g.  http://localhost:8080
+(it tries to open your browser for you; if port 8080 is busy it uses the next
+free one - always use the address that is printed).
+
+Why not just open index.html? Browsers block video textures and local data
+when a page is opened from file://, so the tour would stay black or empty.
+It must be loaded over http://.
+
+2. META QUEST, OPTION A: OVER USB (no hosting needed)
+-----------------------------------------------------
+ a. Enable Developer Mode for your Quest (in the Meta Horizon phone app).
+ b. Connect the Quest to this computer with a USB cable and allow USB debugging
+    inside the headset.
+ c. Start the tour on the computer (step 1) and note the port it prints.
+ d. In a terminal run:   adb reverse tcp:8080 tcp:8080
+    (replace 8080 with the port that was printed, both times).
+ e. In Quest Browser open  http://localhost:8080  and press the VR button.
+http://localhost counts as a "secure context", which is what WebXR requires.
+Note: the author has not verified this on a physical headset.
+
+3. META QUEST, OPTION B: PUT IT ON THE INTERNET
+-----------------------------------------------
+Upload this whole folder (keep the structure) to any static web host that
+serves over HTTPS and supports HTTP Range requests (needed to seek in video).
+Examples: Netlify Drop, Cloudflare Pages, GitHub Pages. Each host has its own
+limits on file size and total size - check them yourself; if they are small,
+export again with the "compact" quality preset. Then open the https:// address
+in Quest Browser and press the VR button.
+
+4. A LOCAL NETWORK ADDRESS WILL NOT ENTER VR
+--------------------------------------------
+An address like http://192.168.x.x:8080 is not HTTPS and is not localhost, so
+Quest Browser will not offer VR on it. Use option A or B.
+
+5. CONTROLS
+-----------
+ - Drag with the mouse (or finger) to look around.
+ - Click or tap hotspots to jump to another scene or read information.
+ - The VR button is at the bottom-right of the screen.
+
+ABOUT VIDEO QUALITY
+-------------------
+Standalone headsets decode video in hardware with limits. H.264 level 5.1
+allows at most 36864 macroblocks per frame; a 4096x2048 frame is 32768, but
+5376x2688 is more than that, so very large videos may stutter or fail on a
+headset. The "vr" and "compact" export presets re-encode oversized videos
+(max width 4096 / 2880, 30 fps, H.264 yuv420p); "original" copies your files
+unchanged.

@@ -1,0 +1,5 @@
+The marker icons in this folder (info.png, link.png, arrow-tip.svg) and the hover/expand
+behaviour of the "hotspot" styles in style.css are adapted from the open-source Marzipano
+project (https://github.com/google/marzipano), Copyright 2016 Google Inc.,
+licensed under the Apache License 2.0 (see LICENSE.txt in this folder).
+Changes: icons are used as supplied; the CSS was rewritten and extended.
