@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/orbit-logo.jpg" alt="Orbit" width="420" /></p>
+
 # Orbit — free editor for interactive 360° video tours
 
 Orbit lets you build a virtual tour out of **360° videos**: one video per location, clickable arrows that move visitors between locations, and info points that explain what they are looking at. You edit on your own computer, and the finished tour runs in any modern web browser and in a **VR headset (Meta Quest)** through WebXR. Nothing is uploaded anywhere unless you choose to publish it.

@@ -62,8 +62,7 @@ kbd { font: 500 11px var(--font); padding: 1px 5px; border-radius: 4px; border: 
 /* ---------------- top bar ---------------- */
 .topbar { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
-.brand-mark { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--accent); position: relative; }
-.brand-mark::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.brand-logo { display: block; width: 34px; height: 34px; border-radius: 8px; }
 .title-input { flex: 0 1 340px; min-width: 120px; height: 32px; padding: 0 10px; background: transparent; border: 1px solid transparent; border-radius: 6px; font-weight: 500; text-overflow: ellipsis; }
 .title-input:hover { border-color: var(--line); }
 .title-input:focus { background: var(--field); border-color: var(--line-strong); outline: none; box-shadow: 0 0 0 2px var(--accent); }
