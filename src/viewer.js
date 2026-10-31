@@ -20,6 +20,7 @@ const markers3d = $('#hotspots');
 const overlay = $('#desktop-hotspots');
 const vrInfo = $('#vr-info');
 const stage = $('#stage');
+const worldRoot = $('#world-root');
 
 
 let hoveredVR = null;
@@ -31,6 +32,27 @@ let userPaused = false;
 let drag = null;
 let suppressClick = false;
 let pointerDown = null;
+let orientFrames = 0;        // >0: re-aim the world at the headset's current heading after this many VR frames
+
+// A 360° video has no depth, so the picture and the markers must stay centred on the viewer's head.
+// A headset reports eye height above the floor (about 1.6 m); markers 5 m away that stay centred on the
+// floor would otherwise appear roughly 18° too low. The root also carries the "starting view" in VR,
+// where the headset (not the mouse) decides which way you are looking.
+AFRAME.registerComponent('head-follow', {
+  init() { this.head = new THREE.Vector3(); this.dir = new THREE.Vector3(); },
+  tick() {
+    const camera = this.el.sceneEl.camera;
+    if (!camera) return;
+    camera.getWorldPosition(this.head);
+    this.el.object3D.position.copy(this.head);
+    if (orientFrames > 0 && world.renderer?.xr.isPresenting && --orientFrames === 0) {
+      camera.getWorldDirection(this.dir);
+      const headYaw = Math.atan2(this.dir.x, -this.dir.z);
+      // a world direction at yaw θ is shown at yaw θ − rotation, so this puts the start direction straight ahead
+      this.el.object3D.rotation.y = (scene()?.startYaw ?? 0) - headYaw;
+    }
+  }
+});
 
 // ---------------------------------------------------------------- presentation
 export function applyPresentation() {
@@ -112,6 +134,7 @@ export function loadScene(autoplay = false) {
     if (video.readyState === 0 && scene()?.video) showNotice('The video is taking a while to load. If it never starts, the file may be too large or in a format this browser cannot decode.', 'warn');
   }, 12000);
   setStartingView();
+  if (world.renderer?.xr.isPresenting) orientFrames = 3;
   sphere.setAttribute('visible', true);
   renderMarkers(); refreshTransport();
   if (autoplay) play();
@@ -593,8 +616,8 @@ function wireControls() {
     if (!menu.hidden && !event.target.closest('#locations-menu, #t-locations')) menu.hidden = true;
   });
 
-  world.addEventListener('enter-vr', () => { $('#gaze').setAttribute('visible', true); overlay.hidden = true; closeInfo(); syncVisibility(); });
-  world.addEventListener('exit-vr', () => { $('#gaze').setAttribute('visible', false); overlay.hidden = false; closeInfo(); syncVisibility(); });
+  world.addEventListener('enter-vr', () => { orientFrames = 3; $('#gaze').setAttribute('visible', true); overlay.hidden = true; closeInfo(); syncVisibility(); });
+  world.addEventListener('exit-vr', () => { orientFrames = 0; worldRoot.object3D.rotation.y = 0; $('#gaze').setAttribute('visible', false); overlay.hidden = false; closeInfo(); syncVisibility(); });
   window.addEventListener('resize', updateOverlay);
 }
 

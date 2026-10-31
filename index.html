@@ -34,8 +34,10 @@
       <main class="stage" id="stage" data-mode="edit">
         <a-scene id="world" embedded renderer="colorManagement: true; antialias: true; foveationLevel: 0.5" background="color: #0b0e11" vr-mode-ui="enabled: true" cursor__mouse="rayOrigin: mouse" cursor__xrselect="rayOrigin: xrselect" raycaster="objects: .clickable; far: 100">
           <a-assets timeout="30000"><video id="tour-video" playsinline webkit-playsinline preload="metadata" loop></video></a-assets>
-          <a-videosphere id="video-sphere" src="#tour-video" radius="50" segments-width="128" segments-height="64" visible="false"></a-videosphere>
-          <a-entity id="hotspots"></a-entity>
+          <a-entity id="world-root" head-follow>
+            <a-videosphere id="video-sphere" src="#tour-video" radius="50" segments-width="128" segments-height="64" visible="false"></a-videosphere>
+            <a-entity id="hotspots"></a-entity>
+          </a-entity>
           <a-entity id="camera" camera="fov: 70" look-controls="pointerLockEnabled: false; reverseMouseDrag: true" position="0 0 0">
             <a-entity id="gaze" visible="false" cursor="fuse: true; fuseTimeout: 1800" raycaster="objects: .clickable; far: 20" geometry="primitive: ring; radiusInner: 0.011; radiusOuter: 0.016" material="color: #f5f4e9; shader: flat; opacity: 0.8" position="0 0 -1"></a-entity>
             <a-entity id="vr-info" visible="false" position="0 0 -2.4"></a-entity>
