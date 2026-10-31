@@ -420,3 +420,6 @@ dialog::backdrop { background: rgba(5, 8, 10, .7); }
 .dir-pad .dir-center { display: grid; place-items: center; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 
 .upload-thumb { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--field); }
+
+/* Off-screen stage where markers are rendered into sprite sheets for the headset (see raster.js) */
+.raster-host { position: fixed; left: -10000px; top: 0; width: 1000px; height: 800px; pointer-events: none; }

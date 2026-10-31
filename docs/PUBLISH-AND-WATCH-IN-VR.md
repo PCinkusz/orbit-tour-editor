@@ -76,7 +76,7 @@ Any static host works if it serves **HTTPS** and supports **range requests** (Ne
 2. Enter the address of your tour. The first video starts loading (use Wi-Fi: a headset-friendly tour is tens of MB per location).
 3. Press **Start tour**.
 4. Press the **VR button** at the bottom right of the browser window and accept the permission prompt.
-5. In VR: point a controller at an arrow or info marker and pull the trigger, or look at it for about two seconds. The info panel has a *Close* button.
+5. In VR: point a controller at a marker to see its hover effect, exactly as on a computer, then pull the trigger, or look at it for about two seconds, to open it. The info panel has a *Close* button.
 
 > Developed and tested in a desktop browser. The VR part follows the WebXR standard but has not been verified on a physical headset by the maintainer. If something does not work, please open an issue with the headset model and what you saw.
 
@@ -104,6 +104,7 @@ A PC with a Quest Link or Air Link connection should also work: open the tour in
 | Links or markers are hard to hit in VR | Increase the marker *Size* in the editor (1.5× or more) and re-export. |
 | The old version still appears after republishing | Browser cache. Reload, or clear the site data. |
 | `Push rejected, file larger than 100 MB` | Export with *Headset-friendly* or *Compact*. |
+| Markers appear a second or two after a location loads | In a headset each marker is rendered once into an image sequence when the location loads (the first time can take a few seconds when there are many large cards). They then play instantly. |
 | Sound does not start | Browsers need a tap first. Press **Start tour**. |
 
 ## Converting videos by hand

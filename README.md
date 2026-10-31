@@ -14,6 +14,7 @@ Everything is free and open source (MIT). It was built as a free alternative to 
 - Make hotspots appear only during part of a video (timed hotspots).
 - Fade, zoom or instant transitions between locations, per tour or per link.
 - Preview exactly what a visitor will get; undo and redo every change.
+- In a headset the markers are the same as on a computer: the same styles, idle animations and hover cards (the expanding tile, the swinging card and so on). Point a controller at one to see its hover.
 - **Export** a self-contained folder, with videos converted to a headset-safe size, and **publish it for free on GitHub Pages** so anyone can open it from a link, including in a Quest.
 
 > **Status.** Developed and tested in desktop Chromium. The VR code path (WebXR) follows the standard but has **not yet been verified on a physical Meta Quest by the maintainer**. If you try it on a headset, please open an issue and say what worked.

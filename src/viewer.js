@@ -8,6 +8,7 @@ import {
   pointFromAngles, anglesFromPoint, updateHotspot, directionOf
 } from './project.js';
 import { createMarker, fitExpand } from './markers.js';
+import { spritesFor, PX } from './raster.js';
 import { mediaUrl } from './media.js';
 import { notify } from './toast.js';
 
@@ -23,7 +24,6 @@ const stage = $('#stage');
 const worldRoot = $('#world-root');
 
 
-let hoveredVR = null;
 let infoId = null;
 let placing = null;          // { onPick }
 let transitioning = false;
@@ -223,7 +223,8 @@ export async function go(target, override = 'inherit') {
 export function renderMarkers() {
   markers3d.replaceChildren();
   overlay.replaceChildren();
-  hoveredVR = null;
+  for (const st of sprites.values()) { st.data?.idle.texture.dispose(); st.data?.hover.texture.dispose(); }
+  sprites.clear();
   for (const hs of scene()?.hotspots ?? []) {
     markers3d.append(build3D(hs));
     overlay.append(buildDom(hs));
@@ -352,60 +353,99 @@ function textured(plane, canvas) {
   plane.addEventListener('object3dset', apply);
   plane.addEventListener('loaded', apply);
 }
+// ---- headset markers: the HTML markers, rendered to sprite sheets by raster.js and played back here, so every style
+// idles and reacts to hover exactly as it does on the desktop.
+const sprites = new Map();       // hotspot id -> playback state
+let xrCapable = false;
+navigator.xr?.isSessionSupported?.('immersive-vr').then(ok => { xrCapable = ok; requestAllSprites(); }).catch(() => {});
+const rasterWanted = () => world.is('vr-mode') || (app.mode !== 'edit' && xrCapable);
+
+function requestSprites(st) {
+  if (st.requested) return;
+  st.requested = true;
+  spritesFor(st.hs).then(data => attachSprites(st, data)).catch(error => { console.warn('Headset marker fallback:', error); useFallback(st); });
+}
+function requestAllSprites() { if (rasterWanted()) for (const st of sprites.values()) requestSprites(st); }
+
+function attachSprites(st, data) {
+  if (sprites.get(st.hs.id) !== st) return;           // the location changed while this was rendering
+  const texture = set => {
+    const t = new THREE.CanvasTexture(set.canvas);
+    t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter;
+    t.repeat.set(1 / set.cols, 1 / set.rows);
+    return { ...set, texture: t };
+  };
+  st.data = { idle: texture(data.idle), hover: texture(data.hover), hit: data.hit };
+  st.ready = true;
+  st.art.setAttribute('visible', true);
+  sizeHit(st);
+  syncVisibility();
+}
+function useFallback(st) {
+  const a = hotspotAppearanceOf(st.hs);
+  const labelled = ['pill', 'bubble', 'reveal'].includes(a.style);
+  const width = labelled ? Math.min(4.2, Math.max(2.2, (st.hs.label || '').length * 0.14 + 1.3)) : 0.95;
+  textured(st.art, draw3D(st.hs, a));
+  st.art.object3D.scale.set(width * a.size, (labelled ? width / 4 : 0.95) * a.size, 1);
+  st.art.setAttribute('visible', true);
+  st.hit.object3D.scale.copy(st.art.object3D.scale);
+  st.ready = true;
+  syncVisibility();
+}
+// The pointer target follows the marker's real box (it grows with the expanding tile) plus some slack for a shaky hand.
+function sizeHit(st) {
+  if (!st.data) return;
+  const r = st.hovered ? st.data.hit.hover : st.data.hit.idle;
+  st.hit.object3D.scale.set((r.r - r.l + 20) * PX, (r.b - r.t + 20) * PX, 1);
+  st.hit.object3D.position.set(((r.l + r.r) / 2) * PX, -((r.t + r.b) / 2) * PX, 0.03);
+}
+function playSprite(st, time, dt) {
+  const d = st.data;
+  if (!d || !st.entity.object3D.visible) return;
+  const mesh = st.art.getObject3D('mesh');
+  if (!mesh) return;
+  const step = dt / 1000 / d.hover.duration;
+  st.progress = Math.min(1, Math.max(0, st.progress + (st.hovered ? step : -step)));
+  const hovering = st.hovered || st.progress > 0;
+  const set = hovering ? d.hover : d.idle;
+  const frame = hovering ? Math.round(st.progress * (set.count - 1)) : (set.count > 1 ? Math.floor(time / 1000 * set.fps) % set.count : 0);
+  if (set === st.set && frame === st.frame) return;
+  if (set !== st.set) {
+    mesh.material.map = set.texture; mesh.material.needsUpdate = true;
+    mesh.renderOrder = hovering ? 10 : 1;
+    st.art.object3D.scale.set(set.cellW * PX, set.cellH * PX, 1);
+    st.art.object3D.position.set((set.cellW / 2 - set.ox) * PX, -(set.cellH / 2 - set.oy) * PX, 0);
+    st.set = set;
+  }
+  st.frame = frame;
+  set.texture.offset.set((frame % set.cols) / set.cols, 1 - (Math.floor(frame / set.cols) + 1) / set.rows);
+}
+AFRAME.registerComponent('sprite-ticker', { tick(time, dt) { for (const st of sprites.values()) playSprite(st, time, dt); } });
+
 function build3D(hs) {
-  const a = hotspotAppearanceOf(hs);
   const entity = document.createElement('a-entity');
   entity.classList.add('tour-hotspot');
   entity.dataset.hotspotId = hs.id;
-  entity.object3D.scale.setScalar(a.size);
   const p = pointFromAngles(hs.yaw, hs.pitch, 5);
   entity.object3D.position.set(p.x, p.y, p.z);
   entity.object3D.lookAt(0, 0, 0);
-  const labelled = ['pill', 'bubble', 'reveal'].includes(a.style);
-  const plate = document.createElement('a-plane');
-  plate.classList.add('clickable');
-  const width = labelled ? Math.min(4.2, Math.max(2.2, (hs.label || '').length * 0.14 + 1.3)) : 0.95;
-  plate.setAttribute('width', width);
-  plate.setAttribute('height', labelled ? width / 4 : 0.95);
-  plate.setAttribute('material', { shader: 'flat', side: 'double', transparent: true, depthWrite: false });
-  textured(plate, draw3D(hs, a));
-  plate.addEventListener('click', event => { event.stopPropagation(); activate(hs.id); });
-  entity.append(plate);
-  if (!labelled) {
-    const caption = hs.label || (hs.type === 'link' ? 'Go there' : 'More info');
-    const tip = document.createElement('a-plane');
-    tip.classList.add('hover-label');
-    tip.setAttribute('width', Math.min(4.2, Math.max(2.1, caption.length * 0.14 + 0.6)));
-    tip.setAttribute('height', 0.7);
-    tip.setAttribute('position', '0 0.77 0.02');
-    tip.setAttribute('visible', false);
-    tip.setAttribute('material', { shader: 'flat', side: 'double', transparent: true, depthWrite: false });
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
-    const g = c.getContext('2d');
-    g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(12, 10, 1000, 236, 42); g.fill();
-    g.fillStyle = '#0b1118'; g.font = '600 81px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(trim(caption, 32), 512, 132, 920);
-    textured(tip, c);
-    tip.addEventListener('click', event => { event.stopPropagation(); activate(hs.id); });
-    entity.append(tip);
-  }
-  for (const plane of entity.querySelectorAll('a-plane')) {
-    plane.addEventListener('mouseenter', () => { if (world.is('vr-mode')) setHoveredVR(hs.id); });
-    plane.addEventListener('mouseleave', () => { if (world.is('vr-mode')) setHoveredVR(null); });
-  }
+  const art = document.createElement('a-plane');
+  art.classList.add('hotspot-art');
+  art.setAttribute('visible', false);
+  art.setAttribute('material', { shader: 'flat', side: 'front', transparent: true, depthWrite: false });
+  const hit = document.createElement('a-plane');      // invisible but pickable; the artwork itself is not
+  hit.classList.add('hit');
+  hit.setAttribute('material', { shader: 'flat', side: 'double', transparent: true, opacity: 0, depthWrite: false });
+  hit.object3D.position.z = 0.03;
+  hit.object3D.scale.setScalar(0.001);
+  entity.append(art, hit);
+  const st = { hs, entity, art, hit, data: null, set: null, frame: -1, progress: 0, hovered: false, requested: false, ready: false };
+  sprites.set(hs.id, st);
+  hit.addEventListener('click', event => { event.stopPropagation(); activate(hs.id); });
+  hit.addEventListener('mouseenter', () => { st.hovered = true; sizeHit(st); });
+  hit.addEventListener('mouseleave', () => { st.hovered = false; sizeHit(st); });
+  if (rasterWanted()) requestSprites(st);
   return entity;
-}
-function setHoveredVR(id) {
-  if (hoveredVR === id) return;
-  hoveredVR = id;
-  for (const marker of markers3d.children) {
-    const tip = marker.querySelector('.hover-label');
-    if (!tip) continue;
-    const active = marker.dataset.hotspotId === id;
-    tip.setAttribute('visible', active);
-    tip.classList.toggle('clickable', active);
-  }
-  refreshPointers();
 }
 function refreshPointers() {
   const run = () => { for (const pointer of document.querySelectorAll('[raycaster], #world')) pointer.components.raycaster?.refreshObjects(); };
@@ -416,6 +456,7 @@ function refreshPointers() {
 // ---- visibility by video time, and projection of markers onto the screen
 function syncVisibility() {
   const inVR = world.is('vr-mode');
+  requestAllSprites();
   for (const hs of scene()?.hotspots ?? []) {
     const visible = hotspotVisibleAt(hs, video.currentTime);
     const dom = [...overlay.children].find(el => el.dataset.hotspotId === hs.id);
@@ -427,7 +468,9 @@ function syncVisibility() {
     if (ent) {
       const shown = visible && inVR;
       if (ent.object3D.visible !== shown) ent.setAttribute('visible', shown);
-      for (const plane of ent.querySelectorAll('a-plane:not(.hover-label)')) plane.classList.toggle('clickable', shown);
+      const st = sprites.get(hs.id);
+      ent.querySelector('.hit')?.classList.toggle('clickable', shown && !!st?.ready);
+      if (!shown && st) { st.hovered = false; st.progress = 0; }   // a marker that disappears must not stay in its hover state
     }
     if (!visible && app.mode !== 'edit' && infoId === hs.id) closeInfo();
   }
