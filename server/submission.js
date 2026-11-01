@@ -83,7 +83,7 @@ export function buildReadme({ project, title, url, headsetTested, quality, probe
   const L = [];
   const links = scenes.flatMap(s => (s.hotspots || []).filter(h => h.type === 'link').map(h => ({ from: s, to: byId.get(h.target), h })));
   const infos = scenes.flatMap(s => (s.hotspots || []).filter(h => h.type === 'info').map(h => ({ scene: s, h })));
-  L.push(`# ${heading}`, '', `This is an interactive 360° video tour with ${n} location${n === 1 ? '' : 's'}. The visitor looks around inside each 360° video and moves between locations through clickable markers; information markers open short explanatory panels. The tour runs in a web browser on a computer, and in a VR headset through WebXR.`, '');
+  L.push(`# ${heading}`, '', `This is an interactive 360° video tour with ${n} location${n === 1 ? '' : 's'}. The visitor looks around inside each 360° video and moves between locations through clickable markers; information markers show short explanatory cards. The tour runs in a web browser on a computer, and in a VR headset through WebXR.`, '');
   L.push('## Launching the experience', '', '### In a VR headset (Meta Quest)', '');
   L.push(url ? `Open this address in the Meta Quest Browser, then press the VR button at the bottom right of the window: ${url}` : '(Hosted link not set – see "Meta Quest from the exported folder without hosting" below)', '');
   L.push('### On a computer', '',
@@ -112,7 +112,7 @@ export function buildReadme({ project, title, url, headsetTested, quality, probe
   L.push('## Navigating between scenes', '',
     '- Look around: drag with the mouse or a finger. Scroll (or pinch) to zoom.',
     '- Click or tap a marker (hotspot) to use it.',
-    '- Arrow-style markers lead to another location. Information markers open a panel with text and, where provided, an image.',
+    '- Arrow-style markers lead to another location. Information markers show a card with text and, where provided, an image: click one on a computer, or point a controller at it in a headset.',
     '- The Locations menu button in the transport bar lists all locations and jumps directly to any of them.',
     '- The transport bar also has play/pause, a seek bar, mute, and fullscreen.',
     '- The Start tour button begins the tour at the first location.',
