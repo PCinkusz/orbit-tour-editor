@@ -427,15 +427,25 @@ function updateHover() {
   pointers ??= [...document.querySelectorAll('[raycaster]')];
   const over = new Set();
   for (const pointer of pointers) {
+    // A pointer can still hold a record of a marker that was just removed (the location changed): skip those.
     const el = pointer.components.raycaster?.intersections?.[0]?.object?.el;
-    if (el?.classList.contains('hit')) over.add(el.parentEl.dataset.hotspotId);
+    const id = el?.isConnected && el.classList.contains('hit') ? el.parentEl?.dataset?.hotspotId : null;
+    if (id) over.add(id);
   }
   for (const st of sprites.values()) {
     const now = over.has(st.hs.id);
     if (now !== st.hovered) { st.hovered = now; sizeHit(st); }
   }
 }
-AFRAME.registerComponent('sprite-ticker', { tick(time, dt) { updateHover(); for (const st of sprites.values()) playSprite(st, time, dt); } });
+// An error thrown from a tick would stop A-Frame before it draws the frame (black screen, sound still playing),
+// so marker playback can never be allowed to throw.
+let tickFailures = 0;
+AFRAME.registerComponent('sprite-ticker', {
+  tick(time, dt) {
+    try { updateHover(); for (const st of sprites.values()) playSprite(st, time, dt); }
+    catch (error) { if (tickFailures++ < 3) console.error('Marker playback error (ignored):', error); }
+  }
+});
 
 function build3D(hs) {
   const entity = document.createElement('a-entity');
