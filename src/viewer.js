@@ -19,7 +19,6 @@ const sphere = $('#video-sphere');
 const cameraEl = $('#camera');
 const markers3d = $('#hotspots');
 const overlay = $('#desktop-hotspots');
-const vrInfo = $('#vr-info');
 const stage = $('#stage');
 const worldRoot = $('#world-root');
 
@@ -279,6 +278,7 @@ function activate(id) {
   const hs = hotspotById(id);
   if (!hs) return;
   if (app.mode === 'edit') { setSelected(id); return; }
+  if (world.is('vr-mode') && hs.type === 'info') return;   // in a headset an info marker is its hover card; there is no separate panel
   if (hs.type === 'link') {
     if (hs.target) go(hs.target, hs.transition);
     else notify('This link has no destination yet.', { kind: 'error' });
@@ -420,7 +420,22 @@ function playSprite(st, time, dt) {
   st.frame = frame;
   set.texture.offset.set((frame % set.cols) / set.cols, 1 - (Math.floor(frame / set.cols) + 1) / set.rows);
 }
-AFRAME.registerComponent('sprite-ticker', { tick(time, dt) { for (const st of sprites.values()) playSprite(st, time, dt); } });
+// Hover is read from what each pointer (gaze and both controllers) is aiming at right now. A-Frame's own enter/leave
+// events are not used because it fires a "leave" straight after a click even though the ray is still on the marker.
+let pointers = null;
+function updateHover() {
+  pointers ??= [...document.querySelectorAll('[raycaster]')];
+  const over = new Set();
+  for (const pointer of pointers) {
+    const el = pointer.components.raycaster?.intersections?.[0]?.object?.el;
+    if (el?.classList.contains('hit')) over.add(el.parentEl.dataset.hotspotId);
+  }
+  for (const st of sprites.values()) {
+    const now = over.has(st.hs.id);
+    if (now !== st.hovered) { st.hovered = now; sizeHit(st); }
+  }
+}
+AFRAME.registerComponent('sprite-ticker', { tick(time, dt) { updateHover(); for (const st of sprites.values()) playSprite(st, time, dt); } });
 
 function build3D(hs) {
   const entity = document.createElement('a-entity');
@@ -442,8 +457,6 @@ function build3D(hs) {
   const st = { hs, entity, art, hit, data: null, set: null, frame: -1, progress: 0, hovered: false, requested: false, ready: false };
   sprites.set(hs.id, st);
   hit.addEventListener('click', event => { event.stopPropagation(); activate(hs.id); });
-  hit.addEventListener('mouseenter', () => { st.hovered = true; sizeHit(st); });
-  hit.addEventListener('mouseleave', () => { st.hovered = false; sizeHit(st); });
   if (rasterWanted()) requestSprites(st);
   return entity;
 }
@@ -505,7 +518,6 @@ export function updateOverlay() {
 // ---------------------------------------------------------------- info card
 function showInfo(hs) {
   infoId = hs.id;
-  if (world.is('vr-mode')) { showVRInfo(hs); return; }
   $('#info-title').textContent = hs.title || hs.label || 'Details';
   $('#info-body').textContent = hs.body || '';
   $('#info-body').hidden = !hs.body;
@@ -520,8 +532,6 @@ export function closeInfo() {
   const wasOpen = infoId !== null;
   infoId = null;
   $('#info-card').hidden = true;
-  vrInfo.setAttribute('visible', false);
-  vrInfo.replaceChildren();
   if (wasOpen) overlay.querySelector('.active')?.classList.remove('active');
 }
 function updateInfoPosition() {
@@ -537,31 +547,6 @@ function updateInfoPosition() {
   card.style.top = `${Math.max(12, Math.min(shell.height - height - 12, point.y - height / 2))}px`;
   card.style.visibility = point.inView ? 'visible' : 'hidden';
 }
-function showVRInfo(hs) {
-  vrInfo.replaceChildren();
-  const add = (tag, attrs) => { const el = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); vrInfo.append(el); return el; };
-  // The panel grows with the text so nothing is cut off.
-  const body = hs.body || '';
-  const wrap = hs.image ? 20 : 31;
-  const textWidth = hs.image ? 1.25 : 2.25;
-  const lines = body.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(line.length / wrap)), 0);
-  const textHeight = lines * (textWidth / wrap) * 1.9;
-  const height = Math.min(3.6, Math.max(1.65, 1.2 + textHeight, hs.image ? 1.8 : 0));
-  const top = height / 2;
-  add('a-plane', { width: 2.6, height, material: 'color: #14181d; shader: flat; opacity: 0.97' });
-  add('a-text', { value: hs.title || hs.label, color: '#eef2f6', width: 2.2, 'wrap-count': 22, anchor: 'left', baseline: 'top', position: `-1.13 ${top - 0.14} 0.02` });
-  if (hs.image) add('a-image', { src: mediaUrl(hs.image), width: 0.85, height: 0.65, position: `0.7 ${top - 0.78} 0.02` });
-  if (body) add('a-text', { value: body, color: '#b4bfca', 'wrap-count': wrap, width: textWidth, anchor: 'left', baseline: 'top', position: `-1.13 ${top - 0.45} 0.02` });
-  const close = add('a-plane', { width: 1.1, height: 0.28, position: `0 ${-top + 0.22} 0.03`, material: 'color: #4da3ff; shader: flat' });
-  close.classList.add('clickable');
-  const label = document.createElement('a-text');
-  for (const [k, v] of Object.entries({ value: 'CLOSE', align: 'center', color: '#06121f', width: 1.4, 'wrap-count': 14, position: '0 0 0.01' })) label.setAttribute(k, v);
-  close.append(label);
-  close.addEventListener('click', event => { event.stopPropagation(); closeInfo(); });
-  vrInfo.setAttribute('visible', true);
-  refreshPointers();
-}
-
 // ---------------------------------------------------------------- placement (click in the view to pick a direction)
 export function startPlacement(text, onPick) {
   placing = { onPick };
